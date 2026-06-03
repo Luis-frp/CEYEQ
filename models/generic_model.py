@@ -68,12 +68,21 @@ def get_model(
     """
     try:
         model_id = f"{model_name}.{version}" if version else model_name
-        model = timm.create_model(
-            model_id,
-            pretrained=pretrained,
-            num_classes=num_classes,
-            drop_rate=dropout_rate,
-        )
+        create_kwargs = {
+            "pretrained": pretrained,
+            "num_classes": num_classes,
+        }
+        if dropout_rate and dropout_rate > 0:
+            create_kwargs["drop_rate"] = dropout_rate
+
+        try:
+            model = timm.create_model(model_id, **create_kwargs)
+        except TypeError as exc:
+            if "drop_rate" not in create_kwargs:
+                raise
+            create_kwargs.pop("drop_rate")
+            print(f"Aviso: '{model_id}' nao aceitou drop_rate={dropout_rate}. Criando sem dropout configuravel.")
+            model = timm.create_model(model_id, **create_kwargs)
 
         return model
     except KeyError:

@@ -166,13 +166,14 @@ def _select_class_indices(dataset, class_name=None, class_label=None, max_real=N
     for idx, metadata in enumerate(dataset.metadata):
         is_target_class = True
         if class_name is not None:
-            is_target_class = metadata["class_name"].lower() == class_name.lower()
+            metadata_class_name = str(metadata.get("class_name", metadata.get("quality", "")))
+            is_target_class = metadata_class_name.lower() == class_name.lower()
         if class_label is not None:
-            is_target_class = is_target_class and metadata["label"] == class_label
+            is_target_class = is_target_class and metadata.get("quality", metadata.get("label")) == class_label
         if not is_target_class:
             continue
 
-        basename = os.path.basename(metadata["filepath"]).lower()
+        basename = os.path.basename(metadata.get("image", metadata.get("filepath", ""))).lower()
         is_fake = basename.startswith("sample")
         if is_fake:
             if max_fake is None or len(selected_fake) < max_fake:
@@ -313,10 +314,14 @@ def run_pca_visualization(
             "pc1": coords[:, 0],
             "pc2": coords[:, 1],
             "domain": domains,
-            "filepath": [metadata["filepath"] for metadata in selected_metadata],
-            "label": [metadata["label"] for metadata in selected_metadata],
-            "class_name": [metadata["class_name"] for metadata in selected_metadata],
-            "sample_id": [metadata["sample_id"] for metadata in selected_metadata],
+            "image": [metadata.get("image", metadata.get("filepath")) for metadata in selected_metadata],
+            "quality": [metadata.get("quality", metadata.get("label")) for metadata in selected_metadata],
+            "patient_id": [metadata.get("patient_id") for metadata in selected_metadata],
+            "class_name": [metadata.get("class_name", metadata.get("quality", metadata.get("label"))) for metadata in selected_metadata],
+            "sample_id": [
+                metadata.get("sample_id", metadata.get("image", metadata.get("filepath")))
+                for metadata in selected_metadata
+            ],
             "weight_path": weight_path,
         }
     ).to_csv(csv_path, index=False)
