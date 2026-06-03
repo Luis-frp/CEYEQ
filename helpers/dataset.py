@@ -89,7 +89,11 @@ class EyeQDataset(Dataset):
 
     def __getitem__(self, idx):
         path, label = self.samples[idx]
-        image = Image.open(path).convert("RGB")
+        try:
+            image = Image.open(path).convert("RGB")
+        except FileNotFoundError:
+            print(f"Aviso: Arquivo de imagem não encontrado, pulando: {path}")
+            return None
 
         if self.transform:
             image = self.transform(image)

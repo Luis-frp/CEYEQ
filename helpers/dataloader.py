@@ -102,7 +102,7 @@ def division_of_groups(
 
     sgkf = StratifiedGroupKFold(n_splits=num_folds, shuffle=True, random_state=random_state)
     folds = []
-    for fold_idx, (train_indices, val_indices) in enumerate(sgkf.split(row_indices, labels, groups)):
+    for fold_idx, (train_indices, val_indices) in enumerate(sgkf.split(df.index, labels, groups)):
         train_rows = row_indices[train_indices].tolist()
         val_rows = row_indices[val_indices].tolist()
         folds.append(
@@ -164,17 +164,22 @@ def get_fold_datasets(
     }
 
     train_dataset = EyeQDataset(
-        csv_path=csv_metadata,
+        root=data_root,
         transform=transform_train,
-        allowed_indices=fold_data["train_indices"],
-        **dataset_kwargs,
-    )
-
-    val_dataset = EyeQDataset(
         csv_path=csv_metadata,
+        allowed_indices=fold_data["train_indices"],
+        filepath_column=filepath_column,
+        label_column=label_column,
+        class_name_column=class_name_column,
+    )
+    val_dataset = EyeQDataset(
+        root=data_root,
         transform=transform_eval,
+        csv_path=csv_metadata,
         allowed_indices=fold_data["val_indices"],
-        **dataset_kwargs,
+        filepath_column=filepath_column,
+        label_column=label_column,
+        class_name_column=class_name_column,
     )
 
     test_dataset = EyeQDataset(
@@ -190,51 +195,109 @@ def get_fold_datasets(
 
 def get_fold_dataloaders(
     fold_idx,
-    batch_size=32,
-    num_workers=0,
-    pin_memory=False,
-    persistent_workers=True,
-    prefetch_factor=2,
-    transform_train=tranform_train(),
+    batch_size,
+    num_workers,
+    pin_memory,
+    persistent_workers,
+    prefetch_factor,
+    transform_train=None,
     transform_eval=None,
     csv_metadata=DEFAULT_TRAIN_CSV,
     test_csv=DEFAULT_TEST_CSV,
     data_root=DEFAULT_DATA_ROOT,
-    split_csv_path=None,
     num_folds=5,
     random_state=42,
     filepath_column=DEFAULT_IMAGE_COLUMN,
     label_column=DEFAULT_LABEL_COLUMN,
     class_name_column=None,
+    split_csv_path=None,
+    collate_fn=None,
 ):
-    train_dataset, val_dataset, test_dataset = get_fold_datasets(
-        fold_idx=fold_idx,
-        transform_train=transform_train,
-        transform_eval=transform_eval,
+    transform_train = _resolve_transform(transform_train)
+    transform_eval = _resolve_transform(transform_eval)
+
+    train_folds = division_of_groups(
         csv_metadata=csv_metadata,
-        test_csv=test_csv,
-        data_root=data_root,
-        split_csv_path=split_csv_path,
         num_folds=num_folds,
         random_state=random_state,
+        filepath_column=filepath_column,
+        label_column=label_column,
+    )
+
+    if fold_idx < 0 or fold_idx >= len(train_folds):
+        raise ValueError(f"fold_idx deve estar entre 0 e {len(train_folds) - 1}.")
+
+    fold_data = train_folds[fold_idx]
+    validate_no_data_leakage(
+        fold_idx,
+        fold_data["train_indices"],
+        fold_data["val_indices"],
+        train_groups=fold_data.get("train_groups"),
+        val_groups=fold_data.get("val_groups"),
+    )
+
+    dataset_kwargs = {
+        "root": data_root,
+        "filepath_column": filepath_column,
+        "label_column": label_column,
+    }
+
+    train_dataset = EyeQDataset(
+        root=data_root,
+        transform=transform_train,
+        csv_path=csv_metadata,
+        allowed_indices=fold_data["train_indices"],
+        filepath_column=filepath_column,
+        label_column=label_column,
+        class_name_column=class_name_column,
+    )
+    val_dataset = EyeQDataset(
+        root=data_root,
+        transform=transform_eval,
+        csv_path=csv_metadata,
+        allowed_indices=fold_data["val_indices"],
         filepath_column=filepath_column,
         label_column=label_column,
         class_name_column=class_name_column,
     )
 
-    loader_kwargs = {
-        "batch_size": batch_size,
-        "num_workers": num_workers,
-        "pin_memory": pin_memory,
-    }
+    test_dataset = EyeQDataset(
+        csv_path=test_csv,
+        transform=transform_eval,
+        **dataset_kwargs,
+    )
 
-    if num_workers > 0:
-        loader_kwargs["persistent_workers"] = persistent_workers
-        if prefetch_factor is not None:
-            loader_kwargs["prefetch_factor"] = prefetch_factor
+    validate_non_empty_splits(fold_idx, train_dataset, val_dataset, test_dataset)
 
-    train_loader = DataLoader(train_dataset, shuffle=True, **loader_kwargs)
-    val_loader = DataLoader(val_dataset, shuffle=False, **loader_kwargs)
-    test_loader = DataLoader(test_dataset, shuffle=False, **loader_kwargs)
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        persistent_workers=persistent_workers,
+        prefetch_factor=prefetch_factor,
+        collate_fn=collate_fn,
+    )
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        persistent_workers=persistent_workers,
+        prefetch_factor=prefetch_factor,
+        collate_fn=collate_fn,
+    )
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        persistent_workers=persistent_workers,
+        prefetch_factor=prefetch_factor,
+        collate_fn=collate_fn,
+    )
 
     return train_loader, val_loader, test_loader

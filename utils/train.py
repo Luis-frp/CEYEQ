@@ -1,6 +1,7 @@
 import copy
 
 import torch
+from torch.utils.data.dataloader import default_collate
 from sklearn.metrics import (
     accuracy_score,
     classification_report,
@@ -11,6 +12,16 @@ from sklearn.metrics import (
     recall_score,
 )
 from tqdm import tqdm
+
+
+def collate_fn_skip_none(batch):
+    """
+    Collate function that filters out None samples from a batch.
+    """
+    batch = [item for item in batch if item is not None]
+    if not batch:
+        return torch.Tensor(), torch.Tensor()  # Return empty tensors if batch is empty
+    return default_collate(batch)
 
 
 def _resolve_module(model, dotted_name):

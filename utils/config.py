@@ -21,7 +21,14 @@ from torchvision import transforms
 from helpers.dataloader import get_fold_dataloaders
 from helpers.metadata import read_metadata_csv
 from models.generic_model import get_model, list_available_models, list_versions
-from utils.train import build_confusion_matrix, compute_per_class_metrics, evaluate, fit_fold, predict_classes
+from utils.train import (
+    build_confusion_matrix,
+    compute_per_class_metrics,
+    evaluate,
+    fit_fold,
+    predict_classes,
+    collate_fn_skip_none,
+)
 from utils.visualizations import save_confusion_matrix, save_training_curves
 
 
@@ -436,6 +443,7 @@ def run_training(args):
             filepath_column=args.filepath_column,
             label_column=args.label_column,
             class_name_column=args.class_name_column,
+            collate_fn=collate_fn_skip_none,
         )
         print(
             f"Amostras no fold {fold_idx}: "
