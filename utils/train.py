@@ -81,7 +81,16 @@ def _compute_classification_metrics(targets, predictions):
     }
 
 
-def train_one_epoch(model, dataloader, criterion, optimizer, device, epoch=None, num_epochs=None):
+def train_one_epoch(
+    model,
+    dataloader,
+    criterion,
+    optimizer,
+    device,
+    epoch=None,
+    num_epochs=None,
+    scheduler=None,
+):
     model.train()
     running_loss = 0.0
     total_batches = 0
@@ -101,6 +110,8 @@ def train_one_epoch(model, dataloader, criterion, optimizer, device, epoch=None,
         logits, loss = _forward_loss(model, criterion, images, labels)
         loss.backward()
         optimizer.step()
+        if scheduler is not None:
+            scheduler.step()
 
         preds = torch.argmax(logits.detach(), dim=1).cpu()
         targets = labels.cpu()
@@ -272,6 +283,7 @@ def fit_fold(
             device=device,
             epoch=epoch,
             num_epochs=num_epochs,
+            scheduler=scheduler,
         )
         val_metrics = evaluate(
             model=model,
@@ -301,9 +313,6 @@ def fit_fold(
             epochs_without_improvement = 0
         else:
             epochs_without_improvement += 1
-
-        if scheduler is not None:
-            scheduler.step(val_metrics["f1"])
 
         current_lr = optimizer.param_groups[0]["lr"]
 

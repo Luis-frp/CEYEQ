@@ -1,6 +1,6 @@
 import os
 
-from helpers.dataset import StomachDataset
+from helpers.dataset import EyeQDataset
 from helpers.metadata import read_metadata_csv
 
 from torch.utils.data import DataLoader
@@ -144,21 +144,21 @@ def get_fold_datasets(
         "label_column": label_column,
     }
 
-    train_dataset = StomachDataset(
+    train_dataset = EyeQDataset(
         csv_path=csv_metadata,
         transform=transform_train,
         allowed_indices=fold_data["train_indices"],
         **dataset_kwargs,
     )
 
-    val_dataset = StomachDataset(
+    val_dataset = EyeQDataset(
         csv_path=csv_metadata,
         transform=transform_eval,
         allowed_indices=fold_data["val_indices"],
         **dataset_kwargs,
     )
 
-    test_dataset = StomachDataset(
+    test_dataset = EyeQDataset(
         csv_path=test_csv,
         transform=transform_eval,
         **dataset_kwargs,

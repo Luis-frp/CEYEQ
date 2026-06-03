@@ -7,7 +7,7 @@ from torch.utils.data import Dataset
 from helpers.metadata import read_metadata_csv
 
 
-class StomachDataset(Dataset):
+class EyeQDataset(Dataset):
     def __init__(
         self,
         root,

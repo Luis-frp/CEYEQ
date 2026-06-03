@@ -15,7 +15,7 @@ if PROJECT_ROOT not in sys.path:
 import torch
 import torch.nn as nn
 from torch.optim import Adam
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.optim.lr_scheduler import OneCycleLR
 from torchvision import transforms
 
 from helpers.dataloader import get_fold_dataloaders
@@ -69,6 +69,10 @@ def parse_args():
     config_dict.setdefault("pin_memory", True)
     config_dict.setdefault("persistent_workers", True)
     config_dict.setdefault("prefetch_factor", 2)
+    config_dict.setdefault("onecycle_pct_start", 0.1)
+    config_dict.setdefault("onecycle_anneal_strategy", "cos")
+    config_dict.setdefault("onecycle_div_factor", 100.0)
+    config_dict.setdefault("onecycle_final_div_factor", 10000.0)
     config_dict.setdefault("local_cache_dir", None)
     config_dict.setdefault("filepath_column", "image")
     config_dict.setdefault("label_column", "quality")
@@ -321,13 +325,17 @@ def _safe_model_tag(args):
 def _dataset_prediction_frame(dataset, targets, predictions, probabilities, fold_idx, split_name, class_names=None):
     rows = []
     for idx, metadata in enumerate(dataset.metadata):
+        image_path = metadata.get("image", metadata.get("filepath"))
+        target_name = metadata.get("class_name")
+        if target_name is None:
+            target_name = class_names[targets[idx]] if class_names and targets[idx] < len(class_names) else targets[idx]
         row = {
             "fold": fold_idx,
             "split": split_name,
-            "sample_id": metadata["sample_id"],
-            "file": metadata["filepath"],
+            "sample_id": metadata.get("sample_id", image_path),
+            "file": image_path,
             "target": targets[idx],
-            "target_name": metadata["class_name"],
+            "target_name": target_name,
             "prediction": predictions[idx],
             "prediction_name": class_names[predictions[idx]] if class_names and predictions[idx] < len(class_names) else predictions[idx],
             "predicted_probability": probabilities[idx][predictions[idx]],
@@ -442,12 +450,16 @@ def run_training(args):
         )
         criterion = nn.CrossEntropyLoss()
         optimizer = Adam(model.parameters(), lr=args.learning_rate)
-        scheduler = ReduceLROnPlateau(
+
+        scheduler = OneCycleLR(
             optimizer,
-            mode="max",
-            factor=args.lr_factor,
-            patience=args.lr_patience,
-            min_lr=args.min_lr,
+            max_lr=args.learning_rate,
+            epochs=args.num_epochs,
+            steps_per_epoch=len(train_loader),
+            pct_start=args.onecycle_pct_start,
+            anneal_strategy=args.onecycle_anneal_strategy,
+            div_factor=args.onecycle_div_factor,
+            final_div_factor=args.onecycle_final_div_factor,
         )
 
         model, history, best_metrics = fit_fold(
@@ -537,11 +549,13 @@ def run_training(args):
             "image_size": args.image_size,
             "batch_size": args.batch_size,
             "learning_rate": args.learning_rate,
+            "scheduler": "OneCycleLR",
+            "onecycle_pct_start": args.onecycle_pct_start,
+            "onecycle_anneal_strategy": args.onecycle_anneal_strategy,
+            "onecycle_div_factor": args.onecycle_div_factor,
+            "onecycle_final_div_factor": args.onecycle_final_div_factor,
             "num_epochs_requested": args.num_epochs,
             "early_stop_patience": args.early_stop_patience,
-            "lr_factor": args.lr_factor,
-            "lr_patience": args.lr_patience,
-            "min_lr": args.min_lr,
             "freeze_backbone_epochs": args.freeze_backbone_epochs,
             "best_epoch": best_metrics["epoch"] + 1,
             "total_parameters": sum(parameter.numel() for parameter in model.parameters()),

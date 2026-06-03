@@ -18,11 +18,12 @@ num_folds: 5
 fold_idx: null
 split_random_state: 42
 
-# Learning Rate Scheduler e Early Stopping
+# OneCycleLR e Early Stopping
 early_stop_patience: 5
-lr_factor: 0.5
-lr_patience: 2
-min_lr: 1.0e-04
+onecycle_pct_start: 0.1
+onecycle_anneal_strategy: "cos"
+onecycle_div_factor: 100.0
+onecycle_final_div_factor: 10000.0
 freeze_backbone_epochs: 0
 
 # Diretorios de saida
