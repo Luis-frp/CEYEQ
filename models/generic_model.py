@@ -60,6 +60,7 @@ def get_model(
     version: Optional[str] = None,
     pretrained: bool = True,
     num_classes: int = 1,
+    dropout_rate: float = 0.0,
 ):
     """
     Retorna o modelo com base no nome e, opcionalmente, na versão (tag) de pesos pré-treinados.
@@ -67,7 +68,12 @@ def get_model(
     """
     try:
         model_id = f"{model_name}.{version}" if version else model_name
-        model = timm.create_model(model_id, pretrained=pretrained, num_classes=num_classes)
+        model = timm.create_model(
+            model_id,
+            pretrained=pretrained,
+            num_classes=num_classes,
+            drop_rate=dropout_rate,
+        )
 
         return model
     except KeyError:
@@ -114,7 +120,7 @@ def menu(preselected: Optional[str] = None):
         else:
             model_name, version = pre, None
         print(f"Carregando modelo predefinido: {model_name}{'.' + version if version else ''}")
-        modelo = get_model(model_name, version=version, pretrained=True, num_classes=3)
+        modelo = get_model(model_name, version=version, pretrained=True, num_classes=3, dropout_rate=0.3)
         save_model_selection(model_name, version, 3)
         return modelo
 
@@ -167,7 +173,7 @@ def menu(preselected: Optional[str] = None):
         versao = None
 
     print("\nCarregando o modelo, aguarde...")
-    modelo = get_model(modelo_escolhido, version=versao, pretrained=True, num_classes=3)
+    modelo = get_model(modelo_escolhido, version=versao, pretrained=True, num_classes=3, dropout_rate=0.3)
     full_name = f"{modelo_escolhido}{'.' + versao if versao else ''}"
     print(f"Modelo '{full_name}' carregado com sucesso -> 3 classes fixo!")
     # salva seleção em JSON

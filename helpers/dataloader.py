@@ -1,11 +1,11 @@
 import os
 
-from helpers.dataset import EyeQDataset
+from helpers.dataset import EyeQDataset, extract_patient_id
 from helpers.metadata import read_metadata_csv
 
 from torch.utils.data import DataLoader
 from torchvision import transforms
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedGroupKFold
 
 
 DEFAULT_TRAIN_CSV = os.path.join("data", "new_train_eyeq_v2.csv")
@@ -54,13 +54,23 @@ def _read_split_source(csv_path, image_column, label_column):
     return df, image_column, label_column
 
 
-def validate_no_data_leakage(fold_idx, train_indices, val_indices):
+def validate_no_data_leakage(fold_idx, train_indices, val_indices, train_groups=None, val_groups=None):
     overlap = set(train_indices) & set(val_indices)
     if overlap:
         raise ValueError(
             f"Vazamento de dados detectado no fold {fold_idx}. "
             f"Amostras repetidas entre treino e validacao: {sorted(overlap)[:10]}"
         )
+
+    if train_groups is not None and val_groups is not None:
+        train_groups = set(train_groups)
+        val_groups = set(val_groups)
+        group_overlap = train_groups & val_groups
+        if group_overlap:
+            raise ValueError(
+                f"Vazamento de pacientes detectado no fold {fold_idx}. "
+                f"Pacientes repetidos entre treino e validacao: {sorted(group_overlap)[:10]}"
+            )
 
 
 def validate_non_empty_splits(fold_idx, train_dataset, val_dataset, test_dataset):
@@ -85,13 +95,14 @@ def division_of_groups(
 ):
     del split_csv_path, class_name_column
 
-    df, _, label_column = _read_split_source(csv_metadata, filepath_column, label_column)
+    df, filepath_column, label_column = _read_split_source(csv_metadata, filepath_column, label_column)
     labels = df[label_column].astype(int).to_numpy()
+    groups = df[filepath_column].map(extract_patient_id).to_numpy()
     row_indices = df.index.to_numpy()
 
-    skf = StratifiedKFold(n_splits=num_folds, shuffle=True, random_state=random_state)
+    sgkf = StratifiedGroupKFold(n_splits=num_folds, shuffle=True, random_state=random_state)
     folds = []
-    for fold_idx, (train_indices, val_indices) in enumerate(skf.split(row_indices, labels)):
+    for fold_idx, (train_indices, val_indices) in enumerate(sgkf.split(row_indices, labels, groups)):
         train_rows = row_indices[train_indices].tolist()
         val_rows = row_indices[val_indices].tolist()
         folds.append(
@@ -99,6 +110,8 @@ def division_of_groups(
                 "fold": fold_idx,
                 "train_indices": train_rows,
                 "val_indices": val_rows,
+                "train_groups": sorted(set(groups[train_indices].tolist())),
+                "val_groups": sorted(set(groups[val_indices].tolist())),
             }
         )
 
@@ -134,7 +147,13 @@ def get_fold_datasets(
         raise ValueError(f"fold_idx deve estar entre 0 e {len(train_folds) - 1}.")
 
     fold_data = train_folds[fold_idx]
-    validate_no_data_leakage(fold_idx, fold_data["train_indices"], fold_data["val_indices"])
+    validate_no_data_leakage(
+        fold_idx,
+        fold_data["train_indices"],
+        fold_data["val_indices"],
+        train_groups=fold_data.get("train_groups"),
+        val_groups=fold_data.get("val_groups"),
+    )
     transform_train = _resolve_transform(transform_train)
     transform_eval = _resolve_transform(transform_eval)
 

@@ -7,6 +7,12 @@ from torch.utils.data import Dataset
 from helpers.metadata import read_metadata_csv
 
 
+def extract_patient_id(image_path):
+    filename = os.path.basename(str(image_path).replace("\\", "/"))
+    stem, _ = os.path.splitext(filename)
+    return stem.split("_", 1)[0]
+
+
 class EyeQDataset(Dataset):
     def __init__(
         self,
@@ -40,6 +46,7 @@ class EyeQDataset(Dataset):
                 continue
 
             rel_path = str(row[filepath_column]).replace("\\", "/").strip()
+            patient_id = extract_patient_id(rel_path)
             label = int(row[label_column])
             img_path = self._resolve_image_path(rel_path)
 
@@ -47,6 +54,7 @@ class EyeQDataset(Dataset):
             self.metadata.append(
                 {
                     "row_index": int(row_index),
+                    "patient_id": patient_id,
                     "image": rel_path,
                     "quality": label,
                 }

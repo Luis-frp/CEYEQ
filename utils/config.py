@@ -30,7 +30,7 @@ IMAGENET_STD = [0.229, 0.224, 0.225]
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Treinamento com StratifiedKFold e YAML config.")
+    parser = argparse.ArgumentParser(description="Treinamento com StratifiedGroupKFold e YAML config.")
     parser.add_argument("--config", type=str, default=os.path.join(PROJECT_ROOT, "config.yaml"), help="Path para o arquivo de configuracao YAML.")
     
     # Pode manter algumas flags CLI que sobrescrevam o YAML ou usar apenas o YAML.
@@ -59,6 +59,7 @@ def parse_args():
     config_dict.setdefault("interactive", True)
     config_dict.setdefault("model_name", "resnet50")
     config_dict.setdefault("model_version", None)
+    config_dict.setdefault("dropout_rate", 0.3)
     config_dict.setdefault("data_augmentation", True)
     config_dict.setdefault("results_dir", os.path.join(PROJECT_ROOT, "resultados"))
     config_dict.setdefault("data_dir", os.path.join(PROJECT_ROOT, "data", "images"))
@@ -307,12 +308,13 @@ def build_transforms(image_size):
     return train_transform, eval_transform
 
 
-def build_model(device, model_name, model_version=None, pretrained=True, num_classes=6):
+def build_model(device, model_name, model_version=None, pretrained=True, num_classes=6, dropout_rate=0.0):
     model = get_model(
         model_name=model_name,
         version=model_version,
         pretrained=pretrained,
         num_classes=num_classes,
+        dropout_rate=dropout_rate,
     )
     return model.to(device)
 
@@ -333,6 +335,7 @@ def _dataset_prediction_frame(dataset, targets, predictions, probabilities, fold
             "fold": fold_idx,
             "split": split_name,
             "sample_id": metadata.get("sample_id", image_path),
+            "patient_id": metadata.get("patient_id"),
             "file": image_path,
             "target": targets[idx],
             "target_name": target_name,
@@ -447,6 +450,7 @@ def run_training(args):
             model_version=args.model_version,
             pretrained=args.pretrained,
             num_classes=args.num_classes,
+            dropout_rate=args.dropout_rate,
         )
         criterion = nn.CrossEntropyLoss()
         optimizer = Adam(model.parameters(), lr=args.learning_rate)
@@ -539,12 +543,14 @@ def run_training(args):
             title=f"{model_tag} - Fold {fold_idx}",
             class_names=class_names,
         )
+        
         architecture_data = {
             "model_name": args.model_name,
             "model_version": args.model_version,
             "full_model_id": model_tag,
             "pretrained": args.pretrained,
             "num_classes": args.num_classes,
+            "dropout_rate": args.dropout_rate,
             "class_names": class_names,
             "image_size": args.image_size,
             "batch_size": args.batch_size,

@@ -35,6 +35,7 @@ results_dir: "${CGL_RESULTS_DIR:-resultados}"
 # Modelo
 pretrained: true
 num_classes: 3
+dropout_rate: 0.3
 
 # Defaults locais. No Kaggle, defina variaveis de ambiente antes de rodar:
 # import os
