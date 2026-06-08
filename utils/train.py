@@ -246,7 +246,6 @@ def fit_fold(
     model,
     train_loader,
     val_loader,
-    test_loader,  # Adicionado para refletir o código real
     optimizer,
     scheduler,
     criterion,
