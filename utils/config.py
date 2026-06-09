@@ -55,7 +55,7 @@ def parse_args():
     config_dict = _expand_config_values(config_dict)
 
     # Converter caminhos relativos para absolutos caso precise.
-    for dir_key in ["save_dir", "viz_dir", "arch_dir", "results_dir", "data_dir", "metadata_csv", "test_csv", "split_csv_path", "local_cache_dir"]:
+    for dir_key in ["save_dir", "viz_dir", "arch_dir", "results_dir", "data_dir", "test_data_dir", "metadata_csv", "test_csv", "split_csv_path", "local_cache_dir"]:
         if dir_key in config_dict and config_dict[dir_key] and not os.path.isabs(config_dict[dir_key]):
             config_dict[dir_key] = os.path.join(PROJECT_ROOT, config_dict[dir_key])
             
@@ -70,6 +70,7 @@ def parse_args():
     config_dict.setdefault("data_augmentation", True)
     config_dict.setdefault("results_dir", os.path.join(PROJECT_ROOT, "resultados"))
     config_dict.setdefault("data_dir", os.path.join(PROJECT_ROOT, "data", "images"))
+    config_dict.setdefault("test_data_dir", os.path.join(PROJECT_ROOT, "data", "images"))
     config_dict.setdefault("metadata_csv", os.path.join(PROJECT_ROOT, "data", "new_train_eyeq_v2.csv"))
     config_dict.setdefault("test_csv", os.path.join(PROJECT_ROOT, "data", "teste_processado.csv"))
     config_dict.setdefault("split_csv_path", None)
@@ -418,6 +419,7 @@ def run_training(args):
     print(f"Treinando em: {device}")
     print(f"CSV de metadados: {args.metadata_csv}")
     print(f"Diretorio das imagens: {args.data_dir}")
+    print(f"Diretorio das imagens de teste: {args.test_data_dir}")
     print(f"CSV de teste: {getattr(args, 'test_csv', None)}")
     print(f"Numero de classes: {args.num_classes}")
 
@@ -437,6 +439,7 @@ def run_training(args):
             csv_metadata=args.metadata_csv,
             test_csv=getattr(args, "test_csv", None),
             data_root=args.data_dir,
+            test_data_root=getattr(args, "test_data_dir", None),
             split_csv_path=args.split_csv_path,
             num_folds=args.num_folds,
             random_state=args.split_random_state,

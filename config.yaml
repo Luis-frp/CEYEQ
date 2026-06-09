@@ -1,10 +1,10 @@
 # Configuracoes de Treinamento
 interactive: false
-model_name: "resnet50"
-model_version: null
+model_name: "convnext_small"
+model_version: "fb_in22k_ft_in1k"
 
-num_epochs: 30
-batch_size: 16
+num_epochs: 1
+batch_size: 64
 learning_rate: 0.0001
 num_workers: 4
 pin_memory: true
@@ -27,33 +27,20 @@ onecycle_final_div_factor: 10000.0
 freeze_backbone_epochs: 0
 
 # Diretorios de saida
-save_dir: "${CGL_SAVE_DIR:-weights}"
-viz_dir: "${CGL_VIZ_DIR:-vizualizacoes}"
-arch_dir: "${CGL_ARCH_DIR:-arquiteturas}"
-results_dir: "${CGL_RESULTS_DIR:-resultados}"
+save_dir: "/kaggle/working/weights"
+viz_dir: "/kaggle/working/vizualizacoes"
+arch_dir: "/kaggle/working/arquiteturas"
+results_dir: "/kaggle/working/resultados"
 
 # Modelo
 pretrained: true
 num_classes: 3
 dropout_rate: 0.3
 
-# Defaults locais. No Kaggle, defina variaveis de ambiente antes de rodar:
-# import os
-# os.environ["CGL_DATA_ROOT"] = "/kaggle/input/seu-dataset/images"
-# os.environ["CGL_METADATA_CSV"] = "/kaggle/input/seu-dataset/new_train_eyeq_v2.csv"
-# os.environ["CGL_TEST_CSV"] = "/kaggle/input/seu-dataset/teste_processado.csv"
-# No Colab com Google Drive, use cache local para nao ler imagens do Drive a cada batch:
-# os.environ["CGL_LOCAL_CACHE_DIR"] = "/content/cgl_cache"
-
-# environment:
-#   CGL_DATA_ROOT: "data/images"
-#   CGL_METADATA_CSV: "data/new_train_eyeq_v2.csv"
-#   CGL_TEST_CSV: "data/teste_processado.csv"
-#   CGL_LOCAL_CACHE_DIR: ""
-
-data_dir: "${CGL_DATA_ROOT:-data/images}"
-metadata_csv: "${CGL_METADATA_CSV:-data/new_train_eyeq_v2.csv}"
-test_csv: "${CGL_TEST_CSV:-data/teste_processado.csv}"
+data_dir: "/kaggle/input/datasets/darklordshiver/eyeqdata/train_processed-20260601T124748Z-3-001/train_processed"
+test_data_dir: "/kaggle/input/datasets/darklordshiver/eyeqdata/test_processed-20260601T124746Z-3-001/test_processed"
+metadata_csv: "/kaggle/input/datasets/darklordshiver/eyeqdata/Label/Label/new_train_eyeq_v2.csv"
+test_csv: "/kaggle/input/datasets/darklordshiver/eyeqdata/Label/Label/teste_processado.csv"
 local_cache_dir: "${CGL_LOCAL_CACHE_DIR:-}"
 filepath_column: "image"
 label_column: "quality"

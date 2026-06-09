@@ -125,6 +125,7 @@ def get_fold_datasets(
     csv_metadata=DEFAULT_TRAIN_CSV,
     test_csv=DEFAULT_TEST_CSV,
     data_root=DEFAULT_DATA_ROOT,
+    test_data_root=None,
     split_csv_path=None,
     num_folds=5,
     random_state=42,
@@ -134,6 +135,7 @@ def get_fold_datasets(
 ):
     del split_csv_path, class_name_column
     test_csv = test_csv or DEFAULT_TEST_CSV
+    test_data_root = test_data_root or data_root
 
     train_folds = division_of_groups(
         csv_metadata=csv_metadata,
@@ -183,9 +185,12 @@ def get_fold_datasets(
     )
 
     test_dataset = EyeQDataset(
+        root=test_data_root,
         csv_path=test_csv,
         transform=transform_eval,
-        **dataset_kwargs,
+        filepath_column=filepath_column,
+        label_column=label_column,
+        class_name_column=class_name_column,
     )
 
     validate_non_empty_splits(fold_idx, train_dataset, val_dataset, test_dataset)
@@ -205,6 +210,7 @@ def get_fold_dataloaders(
     csv_metadata=DEFAULT_TRAIN_CSV,
     test_csv=DEFAULT_TEST_CSV,
     data_root=DEFAULT_DATA_ROOT,
+    test_data_root=None,
     num_folds=5,
     random_state=42,
     filepath_column=DEFAULT_IMAGE_COLUMN,
@@ -215,6 +221,8 @@ def get_fold_dataloaders(
 ):
     transform_train = _resolve_transform(transform_train)
     transform_eval = _resolve_transform(transform_eval)
+
+    test_data_root = test_data_root or data_root
 
     train_folds = division_of_groups(
         csv_metadata=csv_metadata,
@@ -262,9 +270,12 @@ def get_fold_dataloaders(
     )
 
     test_dataset = EyeQDataset(
+        root=test_data_root,
         csv_path=test_csv,
         transform=transform_eval,
-        **dataset_kwargs,
+        filepath_column=filepath_column,
+        label_column=label_column,
+        class_name_column=class_name_column,
     )
 
     validate_non_empty_splits(fold_idx, train_dataset, val_dataset, test_dataset)
