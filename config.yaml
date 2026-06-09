@@ -41,6 +41,7 @@ data_dir: "/kaggle/input/datasets/darklordshiver/eyeqdata/train_processed-202606
 test_data_dir: "/kaggle/input/datasets/darklordshiver/eyeqdata/test_processed-20260601T124746Z-3-001/test_processed"
 metadata_csv: "/kaggle/input/datasets/darklordshiver/eyeqdata/Label/Label/new_train_eyeq_v2.csv"
 test_csv: "/kaggle/input/datasets/darklordshiver/eyeqdata/Label/Label/teste_processado.csv"
+
 local_cache_dir: "${CGL_LOCAL_CACHE_DIR:-}"
 filepath_column: "image"
 label_column: "quality"

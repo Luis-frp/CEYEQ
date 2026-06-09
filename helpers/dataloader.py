@@ -10,7 +10,9 @@ from sklearn.model_selection import StratifiedGroupKFold
 
 DEFAULT_TRAIN_CSV = os.path.join("data", "new_train_eyeq_v2.csv")
 DEFAULT_TEST_CSV = os.path.join("data", "teste_processado.csv")
+
 DEFAULT_DATA_ROOT = os.path.join("data", "images")
+
 DEFAULT_IMAGE_COLUMN = "image"
 DEFAULT_LABEL_COLUMN = "quality"
 

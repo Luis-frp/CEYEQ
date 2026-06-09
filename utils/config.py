@@ -68,11 +68,19 @@ def parse_args():
     config_dict.setdefault("model_version", None)
     config_dict.setdefault("dropout_rate", 0.3)
     config_dict.setdefault("data_augmentation", True)
-    config_dict.setdefault("results_dir", os.path.join(PROJECT_ROOT, "resultados"))
-    config_dict.setdefault("data_dir", os.path.join(PROJECT_ROOT, "data", "images"))
-    config_dict.setdefault("test_data_dir", os.path.join(PROJECT_ROOT, "data", "images"))
-    config_dict.setdefault("metadata_csv", os.path.join(PROJECT_ROOT, "data", "new_train_eyeq_v2.csv"))
-    config_dict.setdefault("test_csv", os.path.join(PROJECT_ROOT, "data", "teste_processado.csv"))
+
+    # Apenas usar defaults se não foram definidos no YAML
+    if "results_dir" not in config_dict or not config_dict["results_dir"]:
+        config_dict["results_dir"] = os.path.join(PROJECT_ROOT, "resultados")
+    if "data_dir" not in config_dict or not config_dict["data_dir"]:
+        config_dict["data_dir"] = os.path.join(PROJECT_ROOT, "data", "images")
+    if "test_data_dir" not in config_dict or not config_dict["test_data_dir"]:
+        config_dict["test_data_dir"] = os.path.join(PROJECT_ROOT, "data", "images")
+    if "metadata_csv" not in config_dict or not config_dict["metadata_csv"]:
+        config_dict["metadata_csv"] = os.path.join(PROJECT_ROOT, "data", "new_train_eyeq_v2.csv")
+    if "test_csv" not in config_dict or not config_dict["test_csv"]:
+        config_dict["test_csv"] = os.path.join(PROJECT_ROOT, "data", "teste_processado.csv")
+    
     config_dict.setdefault("split_csv_path", None)
     config_dict.setdefault("split_random_state", 42)
     config_dict.setdefault("pin_memory", True)
