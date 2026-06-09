@@ -8,13 +8,12 @@ from torchvision import transforms
 from sklearn.model_selection import StratifiedGroupKFold
 
 
-DEFAULT_TRAIN_CSV = os.path.join("data", "new_train_eyeq_v2.csv")
-DEFAULT_TEST_CSV = os.path.join("data", "teste_processado.csv")
+DEFAULT_TRAIN_CSV = os.environ.get("DEFAULT_TRAIN_CSV")
+DEFAULT_TEST_CSV = os.environ.get("DEFAULT_TEST_CSV")
+DEFAULT_DATA_ROOT = os.environ.get("DEFAULT_DATA_ROOT")
+DEFAULT_IMAGE_COLUMN = os.environ.get("DEFAULT_IMAGE_COLUMN", "image")
+DEFAULT_LABEL_COLUMN = os.environ.get("DEFAULT_LABEL_COLUMN", "quality")
 
-DEFAULT_DATA_ROOT = os.path.join("data", "images")
-
-DEFAULT_IMAGE_COLUMN = "image"
-DEFAULT_LABEL_COLUMN = "quality"
 
 
 def _resolve_transform(transform, default_image_size=(224, 224)):
