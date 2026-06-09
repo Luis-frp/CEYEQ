@@ -38,7 +38,8 @@ num_classes: 3
 dropout_rate: 0.3
 
 environment:
-  DEFAULT_DATA_ROOT: "data/images"
+  DEFAULT_TRAIN_DATA_ROOT: "data/train"
+  DEFAULT_TEST_DATA_ROOT: "data/test"
   DEFAULT_TRAIN_CSV: "data/new_train_eyeq_v2.csv"
   DEFAULT_TEST_CSV: "data/teste_processado.csv"
   DEFAULT_IMAGE_COLUMN: "image"
