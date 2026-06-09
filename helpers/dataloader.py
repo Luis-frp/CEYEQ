@@ -26,14 +26,14 @@ def _resolve_transform(transform, default_image_size=(224, 224)):
     ])
 
 
-def tranform_train():
-    return transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomVerticalFlip(),
-        transforms.RandomRotation(180),
-        transforms.ToTensor(),
-    ])
+# def tranform_train():
+#     return transforms.Compose([
+#         transforms.Resize((224, 224)),
+#         transforms.RandomHorizontalFlip(),
+#         transforms.RandomVerticalFlip(),
+#         transforms.RandomRotation(180),
+#         transforms.ToTensor(),
+#     ])
 
 
 def _resolve_column(df, requested_column, default_column, column_description):
