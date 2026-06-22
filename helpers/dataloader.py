@@ -10,8 +10,7 @@ from sklearn.model_selection import StratifiedGroupKFold
 
 DEFAULT_TRAIN_CSV = os.environ.get("DEFAULT_TRAIN_CSV")
 DEFAULT_TEST_CSV = os.environ.get("DEFAULT_TEST_CSV")
-DEFAULT_TRAIN_DATA_ROOT = os.environ.get("DEFAULT_TRAIN_DATA_ROOT")
-DEFAULT_TEST_DATA_ROOT = os.environ.get("DEFAULT_TEST_DATA_ROOT")
+DEFAULT_DATA_ROOT = os.environ.get("DEFAULT_DATA_ROOT")
 DEFAULT_IMAGE_COLUMN = os.environ.get("DEFAULT_IMAGE_COLUMN", "image")
 DEFAULT_LABEL_COLUMN = os.environ.get("DEFAULT_LABEL_COLUMN", "quality")
 
@@ -126,8 +125,8 @@ def get_fold_datasets(
     transform_eval=None,
     csv_metadata=DEFAULT_TRAIN_CSV,
     test_csv=DEFAULT_TEST_CSV,
-    data_root=DEFAULT_TRAIN_DATA_ROOT,
-    test_data_root=DEFAULT_TEST_DATA_ROOT,
+    data_root=DEFAULT_DATA_ROOT,
+    test_data_root=None,
     split_csv_path=None,
     num_folds=5,
     random_state=42,
@@ -211,8 +210,8 @@ def get_fold_dataloaders(
     transform_eval=None,
     csv_metadata=DEFAULT_TRAIN_CSV,
     test_csv=DEFAULT_TEST_CSV,
-    data_root=DEFAULT_TRAIN_DATA_ROOT,
-    test_data_root=DEFAULT_TEST_DATA_ROOT,
+    data_root=DEFAULT_DATA_ROOT,
+    test_data_root=None,
     num_folds=5,
     random_state=42,
     filepath_column=DEFAULT_IMAGE_COLUMN,

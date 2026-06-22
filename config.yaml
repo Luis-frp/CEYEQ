@@ -38,17 +38,16 @@ num_classes: 3
 dropout_rate: 0.3
 
 environment:
-  DEFAULT_TRAIN_DATA_ROOT: "data/train"
-  DEFAULT_TEST_DATA_ROOT: "data/test"
+  DEFAULT_DATA_ROOT: "data/images"
   DEFAULT_TRAIN_CSV: "data/new_train_eyeq_v2.csv"
   DEFAULT_TEST_CSV: "data/teste_processado.csv"
   DEFAULT_IMAGE_COLUMN: "image"
   DEFAULT_LABEL_COLUMN: "quality"
 
-# data_dir: r"/kaggle/input/datasets/darklordshiver/eyeqdata/train_processed-20260601T124748Z-3-001/train_processed"
-# test_data_dir: r"/kaggle/input/datasets/darklordshiver/eyeqdata/test_processed-20260601T124746Z-3-001/test_processed"
-# metadata_csv: "/kaggle/input/datasets/darklordshiver/eyeqdata/Label/Label/new_train_eyeq_v2.csv"
-# test_csv: r"/kaggle/input/datasets/darklordshiver/eyeqdata/Label/Label/teste_processado.csv"
+data_dir: r"/kaggle/input/datasets/darklordshiver/eyeqdata/train_processed-20260601T124748Z-3-001/train_processed"
+test_data_dir: r"/kaggle/input/datasets/darklordshiver/eyeqdata/test_processed-20260601T124746Z-3-001/test_processed"
+metadata_csv: "/kaggle/input/datasets/darklordshiver/eyeqdata/Label/Label/new_train_eyeq_v2.csv"
+test_csv: r"/kaggle/input/datasets/darklordshiver/eyeqdata/Label/Label/teste_processado.csv"
 
 local_cache_dir: "${CGL_LOCAL_CACHE_DIR:-}"
 filepath_column: "image"
