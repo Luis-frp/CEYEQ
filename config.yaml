@@ -4,7 +4,7 @@ model_name: "convnext_small"
 model_version: "fb_in22k_ft_in1k"
 
 num_epochs: 1
-batch_size: 64
+batch_size: 4
 learning_rate: 0.0001
 num_workers: 4
 pin_memory: true
@@ -27,27 +27,21 @@ onecycle_final_div_factor: 10000.0
 freeze_backbone_epochs: 0
 
 # Diretorios de saida
-save_dir: "/kaggle/working/weights"
-viz_dir: "/kaggle/working/vizualizacoes"
-arch_dir: "/kaggle/working/arquiteturas"
-results_dir: "/kaggle/working/resultados"
+save_dir: "/home/luis/Dev/Classificação/CEYEQ/weights"
+viz_dir: "/home/luis/Dev/Classificação/CEYEQ/vizualizacoes"
+arch_dir: "/home/luis/Dev/Classificação/CEYEQ/arquiteturas"
+results_dir: "/home/luis/Dev/Classificação/CEYEQ/resultados"
 
 # Modelo
 pretrained: true
 num_classes: 3
 dropout_rate: 0.3
 
-environment:
-  DEFAULT_DATA_ROOT: "data/images"
-  DEFAULT_TRAIN_CSV: "data/new_train_eyeq_v2.csv"
-  DEFAULT_TEST_CSV: "data/teste_processado.csv"
-  DEFAULT_IMAGE_COLUMN: "image"
-  DEFAULT_LABEL_COLUMN: "quality"
 
-data_dir: r"/kaggle/input/datasets/darklordshiver/eyeqdata/train_processed-20260601T124748Z-3-001/train_processed"
-test_data_dir: r"/kaggle/input/datasets/darklordshiver/eyeqdata/test_processed-20260601T124746Z-3-001/test_processed"
-metadata_csv: "/kaggle/input/datasets/darklordshiver/eyeqdata/Label/Label/new_train_eyeq_v2.csv"
-test_csv: r"/kaggle/input/datasets/darklordshiver/eyeqdata/Label/Label/teste_processado.csv"
+data_dir: "/home/luis/Dev/Classificação/CEYEQ/Balanceado/train"
+test_data_dir: "/home/luis/Dev/Classificação/CEYEQ/test_processed/test_processed"
+metadata_csv: "/home/luis/Dev/Classificação/CEYEQ/data/eyeq_train_dataset_balanced.csv"
+test_csv: "/home/luis/Dev/Classificação/CEYEQ/data/teste_processado.csv"
 
 local_cache_dir: "${CGL_LOCAL_CACHE_DIR:-}"
 filepath_column: "image"

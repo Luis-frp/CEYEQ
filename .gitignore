@@ -1,0 +1,19 @@
+# Pastas ocultas
+.Balanceado/
+.weights/
+
+# Arquivos
+.Balanceado.zip
+
+# Diretórios do projeto
+Modelos/
+test_processed/
+teste_ensemble_results/
+test_ensemble/
+arquiteturas/
+weights/
+
+# Pesos de modelos
+*.pt
+*.pth
+*.ckpt
