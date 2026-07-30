@@ -29,7 +29,7 @@ from utils.train import (
     predict_classes,
     collate_fn_skip_none,
 )
-from utils.visualizations import save_confusion_matrix, save_training_curves
+from utils.visualizations import save_confusion_matrix, save_roc_curve, save_training_curves
 
 
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
@@ -382,6 +382,8 @@ def _save_fold_csvs(args, safe_model_tag, fold_idx, fold_result, val_frame, test
             "precision": fold_result["best_val_precision"],
             "recall": fold_result["best_val_recall"],
             "f1": fold_result["best_val_f1"],
+            "kappa": fold_result["best_val_kappa"],
+            "auc": fold_result["best_val_auc"],
             "best_epoch": fold_result["best_epoch"],
         },
         {
@@ -392,6 +394,8 @@ def _save_fold_csvs(args, safe_model_tag, fold_idx, fold_result, val_frame, test
             "precision": fold_result["test_precision"],
             "recall": fold_result["test_recall"],
             "f1": fold_result["test_f1"],
+            "kappa": fold_result["test_kappa"],
+            "auc": fold_result["test_auc"],
             "best_epoch": fold_result["best_epoch"],
         },
     ]
@@ -505,6 +509,7 @@ def run_training(args):
             dataloader=test_loader,
             criterion=criterion,
             device=device,
+            class_labels=class_labels,
         )
         val_targets, val_predictions, val_probabilities = predict_classes(
             model=model,
@@ -528,6 +533,7 @@ def run_training(args):
         for row in compute_per_class_metrics(
             test_targets,
             test_predictions,
+            probabilities=test_probabilities,
             labels=class_labels,
             class_names=class_names,
         ):
@@ -543,18 +549,34 @@ def run_training(args):
             "best_val_precision": best_metrics["val_precision"],
             "best_val_recall": best_metrics["val_recall"],
             "best_val_f1": best_metrics["val_f1"],
+            "best_val_kappa": best_metrics["val_kappa"],
+            "best_val_auc": best_metrics["val_auc"],
             "test_loss": test_metrics["loss"],
             "test_acc": test_metrics["acc"],
             "test_precision": test_metrics["precision"],
             "test_recall": test_metrics["recall"],
             "test_f1": test_metrics["f1"],
+            "test_kappa": test_metrics["kappa"],
+            "test_auc": test_metrics["auc"],
         }
 
         weight_path = os.path.join(args.save_dir, f"{safe_model_tag}_fold_{fold_idx}.pth")
         curve_path = os.path.join(args.viz_dir, f"{safe_model_tag}_fold_{fold_idx}_curvas.png")
         confusion_matrix_path = os.path.join(args.viz_dir, f"{safe_model_tag}_fold_{fold_idx}_matriz_confusao.png")
+        roc_val_path = os.path.join(args.viz_dir, f"{safe_model_tag}_fold_{fold_idx}_roc_validacao.png")
+        roc_test_path = os.path.join(args.viz_dir, f"{safe_model_tag}_fold_{fold_idx}_roc_teste.png")
         architecture_path = os.path.join(args.arch_dir, f"{safe_model_tag}_fold_{fold_idx}_arquitetura.json")
-        torch.save(model.state_dict(), weight_path)
+        torch.save(
+            {
+                "model_state": model.state_dict(),
+                "history": history,
+                "best_metrics": best_metrics,
+                "test_metrics": test_metrics,
+                "class_labels": class_labels,
+                "class_names": class_names,
+            },
+            weight_path,
+        )
         save_training_curves(history, curve_path, title=f"{model_tag} - Fold {fold_idx}")
         save_confusion_matrix(
             confusion_matrix,
@@ -562,7 +584,21 @@ def run_training(args):
             title=f"{model_tag} - Fold {fold_idx}",
             class_names=class_names,
         )
-        
+        save_roc_curve(
+            val_targets,
+            val_probabilities,
+            roc_val_path,
+            class_names=class_names,
+            title=f"{model_tag} - Fold {fold_idx} - ROC Validacao",
+        )
+        save_roc_curve(
+            test_targets,
+            test_probabilities,
+            roc_test_path,
+            class_names=class_names,
+            title=f"{model_tag} - Fold {fold_idx} - ROC Teste Fixo",
+        )
+
         architecture_data = {
             "model_name": args.model_name,
             "model_version": args.model_version,
@@ -619,6 +655,8 @@ def run_training(args):
         fold_result["weight_path"] = weight_path
         fold_result["curve_path"] = curve_path
         fold_result["confusion_matrix_path"] = confusion_matrix_path
+        fold_result["roc_val_path"] = roc_val_path
+        fold_result["roc_test_path"] = roc_test_path
         fold_result["architecture_path"] = architecture_path
         fold_result["metrics_csv_path"] = metrics_csv_path
         fold_result["predictions_csv_path"] = predictions_csv_path
@@ -632,26 +670,34 @@ def run_training(args):
             f"best_val_precision={fold_result['best_val_precision']:.4f} | "
             f"best_val_recall={fold_result['best_val_recall']:.4f} | "
             f"best_val_f1={fold_result['best_val_f1']:.4f} | "
+            f"best_val_kappa={fold_result['best_val_kappa']:.4f} | "
+            f"best_val_auc={fold_result['best_val_auc']:.4f} | "
             f"test_loss={fold_result['test_loss']:.4f} | "
             f"test_acc={fold_result['test_acc']:.4f} | "
             f"test_precision={fold_result['test_precision']:.4f} | "
             f"test_recall={fold_result['test_recall']:.4f} | "
             f"test_f1={fold_result['test_f1']:.4f} | "
+            f"test_kappa={fold_result['test_kappa']:.4f} | "
+            f"test_auc={fold_result['test_auc']:.4f} | "
             f"weights={weight_path} | "
             f"curvas={curve_path} | "
             f"matriz={confusion_matrix_path} | "
+            f"roc_validacao={roc_val_path} | "
+            f"roc_teste={roc_test_path} | "
             f"arquitetura={architecture_path} | "
             f"metricas_csv={metrics_csv_path} | "
             f"predicoes_csv={predictions_csv_path}"
         )
 
-    from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-    
+    from sklearn.metrics import accuracy_score, cohen_kappa_score, precision_score, recall_score, f1_score, roc_auc_score
+
     mean_test_loss = sum(result["test_loss"] for result in fold_results) / len(fold_results)
     mean_test_acc = sum(result["test_acc"] for result in fold_results) / len(fold_results)
     mean_test_precision = sum(result["test_precision"] for result in fold_results) / len(fold_results)
     mean_test_recall = sum(result["test_recall"] for result in fold_results) / len(fold_results)
     mean_test_f1 = sum(result["test_f1"] for result in fold_results) / len(fold_results)
+    mean_test_kappa = sum(result["test_kappa"] for result in fold_results) / len(fold_results)
+    mean_test_auc = sum(result["test_auc"] for result in fold_results) / len(fold_results)
     summary_csv_path = os.path.join(args.results_dir, "resumo_folds.csv")
     pd.DataFrame(fold_results).to_csv(summary_csv_path, index=False)
 
@@ -659,6 +705,7 @@ def run_training(args):
     per_class_summary_path = os.path.join(args.results_dir, f"{safe_model_tag}_metricas_por_classe_media_desvio.csv")
     mean_confusion_matrix_path = os.path.join(args.viz_dir, f"{safe_model_tag}_matriz_confusao_media.png")
     mean_confusion_matrix_csv_path = os.path.join(args.results_dir, f"{safe_model_tag}_matriz_confusao_media.csv")
+    mean_roc_curve_path = os.path.join(args.viz_dir, f"{safe_model_tag}_roc_teste_ensemble.png")
 
     per_class_summary = pd.DataFrame()
     if per_class_metric_rows:
@@ -675,6 +722,8 @@ def run_training(args):
                 recall_std=("recall", std_ddof0),
                 f1_mean=("f1", "mean"),
                 f1_std=("f1", std_ddof0),
+                auc_mean=("auc", "mean"),
+                auc_std=("auc", std_ddof0),
                 support_mean=("support", "mean"),
                 support_std=("support", std_ddof0),
             )
@@ -704,14 +753,33 @@ def run_training(args):
         import numpy as np
 
         probs_array = np.array(all_test_probabilities)
-        ensemble_preds = np.argmax(np.mean(probs_array, axis=0), axis=1).tolist()
-        
+        mean_probs = np.mean(probs_array, axis=0)
+        ensemble_preds = np.argmax(mean_probs, axis=1).tolist()
+
         ensemble_acc = accuracy_score(final_test_targets, ensemble_preds)
         ensemble_precision = precision_score(final_test_targets, ensemble_preds, average="macro", zero_division=0)
         ensemble_recall = recall_score(final_test_targets, ensemble_preds, average="macro", zero_division=0)
         ensemble_f1 = f1_score(final_test_targets, ensemble_preds, average="macro", zero_division=0)
+        ensemble_kappa = cohen_kappa_score(final_test_targets, ensemble_preds)
+        try:
+            if mean_probs.shape[1] == 2:
+                ensemble_auc = roc_auc_score(final_test_targets, mean_probs[:, 1])
+            else:
+                ensemble_auc = roc_auc_score(
+                    final_test_targets, mean_probs, multi_class="ovr", average="macro", labels=class_labels
+                )
+        except ValueError:
+            ensemble_auc = 0.0
+
+        save_roc_curve(
+            final_test_targets,
+            mean_probs.tolist(),
+            mean_roc_curve_path,
+            class_names=class_names,
+            title=f"{model_tag} - ROC Teste Fixo (Ensemble)",
+        )
     else:
-        ensemble_acc = ensemble_precision = ensemble_recall = ensemble_f1 = 0.0
+        ensemble_acc = ensemble_precision = ensemble_recall = ensemble_f1 = ensemble_kappa = ensemble_auc = 0.0
 
     print("\n===== Resumo Final =====")
     for result in fold_results:
@@ -723,14 +791,20 @@ def run_training(args):
             f"best_val_precision={result['best_val_precision']:.4f} | "
             f"best_val_recall={result['best_val_recall']:.4f} | "
             f"best_val_f1={result['best_val_f1']:.4f} | "
+            f"best_val_kappa={result['best_val_kappa']:.4f} | "
+            f"best_val_auc={result['best_val_auc']:.4f} | "
             f"test_loss={result['test_loss']:.4f} | "
             f"test_acc={result['test_acc']:.4f} | "
             f"test_precision={result['test_precision']:.4f} | "
             f"test_recall={result['test_recall']:.4f} | "
             f"test_f1={result['test_f1']:.4f} | "
+            f"test_kappa={result['test_kappa']:.4f} | "
+            f"test_auc={result['test_auc']:.4f} | "
             f"weights={result['weight_path']} | "
             f"curvas={result['curve_path']} | "
             f"matriz={result['confusion_matrix_path']} | "
+            f"roc_validacao={result['roc_val_path']} | "
+            f"roc_teste={result['roc_test_path']} | "
             f"arquitetura={result['architecture_path']} | "
             f"metricas_csv={result['metrics_csv_path']} | "
             f"predicoes_csv={result['predictions_csv_path']}"
@@ -741,6 +815,8 @@ def run_training(args):
     print(f"Media Aritmetica Isolada test_precision: {mean_test_precision:.4f}")
     print(f"Media Aritmetica Isolada test_recall: {mean_test_recall:.4f}")
     print(f"Media Aritmetica Isolada test_f1: {mean_test_f1:.4f}")
+    print(f"Media Aritmetica Isolada test_kappa: {mean_test_kappa:.4f}")
+    print(f"Media Aritmetica Isolada test_auc: {mean_test_auc:.4f}")
     print(f"Resumo dos folds salvo em: {summary_csv_path}")
     if not per_class_summary.empty:
         print("\n===== Media e Desvio Padrao por Classe (Teste Fixo) =====")
@@ -750,6 +826,7 @@ def run_training(args):
                 f"precision={row['precision_mean']:.4f} +/- {row['precision_std']:.4f} | "
                 f"recall={row['recall_mean']:.4f} +/- {row['recall_std']:.4f} | "
                 f"f1={row['f1_mean']:.4f} +/- {row['f1_std']:.4f} | "
+                f"auc={row['auc_mean']:.4f} +/- {row['auc_std']:.4f} | "
                 f"support={row['support_mean']:.2f} +/- {row['support_std']:.2f}"
             )
         print(f"Metricas por classe dos folds salvas em: {per_class_metrics_path}")
@@ -757,9 +834,13 @@ def run_training(args):
     if fold_confusion_matrices:
         print(f"Matriz de confusao media salva em: {mean_confusion_matrix_path}")
         print(f"CSV da matriz de confusao media salvo em: {mean_confusion_matrix_csv_path}")
-    
+
     print("\n===== Resultado do Ensemble (Votacao Real via Sklearn) =====")
     print(f"Ensemble test_acc: {ensemble_acc:.4f}")
     print(f"Ensemble test_precision: {ensemble_precision:.4f}")
     print(f"Ensemble test_recall: {ensemble_recall:.4f}")
     print(f"Ensemble test_f1: {ensemble_f1:.4f}")
+    print(f"Ensemble test_kappa: {ensemble_kappa:.4f}")
+    print(f"Ensemble test_auc: {ensemble_auc:.4f}")
+    if len(all_test_probabilities) > 0 and final_test_targets is not None:
+        print(f"Curva ROC do ensemble salva em: {mean_roc_curve_path}")

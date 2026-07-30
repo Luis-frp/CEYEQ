@@ -5,11 +5,13 @@ from torch.utils.data.dataloader import default_collate
 from sklearn.metrics import (
     accuracy_score,
     classification_report,
+    cohen_kappa_score,
     confusion_matrix,
     f1_score,
     precision_recall_fscore_support,
     precision_score,
     recall_score,
+    roc_auc_score,
 )
 from tqdm import tqdm
 
@@ -81,14 +83,34 @@ def _forward_loss(model, criterion, images, labels):
     return logits, loss
 
 
-def _compute_classification_metrics(targets, predictions):
+def _safe_kappa(targets, predictions):
+    if len(set(targets)) < 2:
+        return 0.0
+    return cohen_kappa_score(targets, predictions)
+
+
+def _safe_auc(targets, probabilities, labels=None):
+    if not probabilities or len(set(targets)) < 2:
+        return 0.0
+    try:
+        if len(probabilities[0]) == 2:
+            positive_scores = [row[1] for row in probabilities]
+            return roc_auc_score(targets, positive_scores)
+        return roc_auc_score(targets, probabilities, multi_class="ovr", average="macro", labels=labels)
+    except ValueError:
+        return 0.0
+
+
+def _compute_classification_metrics(targets, predictions, probabilities=None, labels=None):
     if len(targets) == 0:
-        return {"acc": 0.0, "precision": 0.0, "recall": 0.0, "f1": 0.0}
+        return {"acc": 0.0, "precision": 0.0, "recall": 0.0, "f1": 0.0, "kappa": 0.0, "auc": 0.0}
     return {
         "acc": accuracy_score(targets, predictions),
         "precision": precision_score(targets, predictions, average="macro", zero_division=0),
         "recall": recall_score(targets, predictions, average="macro", zero_division=0),
         "f1": f1_score(targets, predictions, average="macro", zero_division=0),
+        "kappa": _safe_kappa(targets, predictions),
+        "auc": _safe_auc(targets, probabilities, labels),
     }
 
 
@@ -101,12 +123,14 @@ def train_one_epoch(
     epoch=None,
     num_epochs=None,
     scheduler=None,
+    class_labels=None,
 ):
     model.train()
     running_loss = 0.0
     total_batches = 0
     all_targets = []
     all_preds = []
+    all_probs = []
 
     progress_bar = tqdm(
         dataloader,
@@ -124,11 +148,13 @@ def train_one_epoch(
         if scheduler is not None:
             scheduler.step()
 
-        preds = torch.argmax(logits.detach(), dim=1).cpu()
+        probs = torch.softmax(logits.detach(), dim=1).cpu()
+        preds = torch.argmax(probs, dim=1)
         targets = labels.cpu()
 
         all_targets.extend(targets.tolist())
         all_preds.extend(preds.tolist())
+        all_probs.extend(probs.tolist())
 
         running_loss += loss.item()
         total_batches += 1
@@ -139,18 +165,19 @@ def train_one_epoch(
             f1=f"{metrics['f1']:.4f}",
         )
 
-    metrics = _compute_classification_metrics(all_targets, all_preds)
+    metrics = _compute_classification_metrics(all_targets, all_preds, all_probs, labels=class_labels)
     metrics["loss"] = running_loss / max(total_batches, 1)
     return metrics
 
 
 @torch.no_grad()
-def evaluate(model, dataloader, criterion, device, stage="Eval", epoch=None, num_epochs=None):
+def evaluate(model, dataloader, criterion, device, stage="Eval", epoch=None, num_epochs=None, class_labels=None):
     model.eval()
     running_loss = 0.0
     total_batches = 0
     all_targets = []
     all_preds = []
+    all_probs = []
 
     progress_bar = tqdm(
         dataloader,
@@ -162,11 +189,13 @@ def evaluate(model, dataloader, criterion, device, stage="Eval", epoch=None, num
         images, labels = _move_batch_to_device(images, labels, device)
         logits, loss = _forward_loss(model, criterion, images, labels)
 
-        preds = torch.argmax(logits, dim=1).cpu()
+        probs = torch.softmax(logits, dim=1).cpu()
+        preds = torch.argmax(probs, dim=1)
         targets = labels.cpu()
 
         all_targets.extend(targets.tolist())
         all_preds.extend(preds.tolist())
+        all_probs.extend(probs.tolist())
 
         running_loss += loss.item()
         total_batches += 1
@@ -177,7 +206,7 @@ def evaluate(model, dataloader, criterion, device, stage="Eval", epoch=None, num
             f1=f"{metrics['f1']:.4f}",
         )
 
-    metrics = _compute_classification_metrics(all_targets, all_preds)
+    metrics = _compute_classification_metrics(all_targets, all_preds, all_probs, labels=class_labels)
     metrics["loss"] = running_loss / max(total_batches, 1)
     return metrics
 
@@ -215,7 +244,24 @@ def build_confusion_matrix(targets, predictions, labels=None):
     return confusion_matrix(targets, predictions, labels=labels).tolist()
 
 
-def compute_per_class_metrics(targets, predictions, labels=None, class_names=None):
+def _per_class_auc(targets, probabilities, labels):
+    targets_list = list(targets)
+    aucs = []
+    for class_idx, label in enumerate(labels):
+        binary_targets = [1 if target == label else 0 for target in targets_list]
+        positive_count = sum(binary_targets)
+        if positive_count == 0 or positive_count == len(binary_targets):
+            aucs.append(0.0)
+            continue
+        class_scores = [row[class_idx] for row in probabilities]
+        try:
+            aucs.append(roc_auc_score(binary_targets, class_scores))
+        except ValueError:
+            aucs.append(0.0)
+    return aucs
+
+
+def compute_per_class_metrics(targets, predictions, probabilities=None, labels=None, class_names=None):
     if labels is None:
         labels = sorted(set(targets) | set(predictions))
 
@@ -225,6 +271,8 @@ def compute_per_class_metrics(targets, predictions, labels=None, class_names=Non
         labels=labels,
         zero_division=0,
     )
+
+    per_class_auc = _per_class_auc(targets, probabilities, labels) if probabilities else [0.0] * len(labels)
 
     rows = []
     for idx, label in enumerate(labels):
@@ -236,6 +284,7 @@ def compute_per_class_metrics(targets, predictions, labels=None, class_names=Non
                 "precision": float(precision[idx]),
                 "recall": float(recall[idx]),
                 "f1": float(f1[idx]),
+                "auc": float(per_class_auc[idx]),
                 "support": int(support[idx]),
             }
         )
@@ -262,11 +311,15 @@ def fit_fold(
         "train_precision": [],
         "train_recall": [],
         "train_f1": [],
+        "train_kappa": [],
+        "train_auc": [],
         "val_loss": [],
         "val_acc": [],
         "val_precision": [],
         "val_recall": [],
         "val_f1": [],
+        "val_kappa": [],
+        "val_auc": [],
     }
 
     best_state = copy.deepcopy(model.state_dict())
@@ -295,6 +348,7 @@ def fit_fold(
             epoch=epoch,
             num_epochs=num_epochs,
             scheduler=scheduler,
+            class_labels=class_labels,
         )
         val_metrics = evaluate(
             model=model,
@@ -304,6 +358,7 @@ def fit_fold(
             stage="Val",
             epoch=epoch,
             num_epochs=num_epochs,
+            class_labels=class_labels,
         )
 
         history["train_loss"].append(train_metrics["loss"])
@@ -311,11 +366,15 @@ def fit_fold(
         history["train_precision"].append(train_metrics["precision"])
         history["train_recall"].append(train_metrics["recall"])
         history["train_f1"].append(train_metrics["f1"])
+        history["train_kappa"].append(train_metrics["kappa"])
+        history["train_auc"].append(train_metrics["auc"])
         history["val_loss"].append(val_metrics["loss"])
         history["val_acc"].append(val_metrics["acc"])
         history["val_precision"].append(val_metrics["precision"])
         history["val_recall"].append(val_metrics["recall"])
         history["val_f1"].append(val_metrics["f1"])
+        history["val_kappa"].append(val_metrics["kappa"])
+        history["val_auc"].append(val_metrics["auc"])
 
         if val_metrics["f1"] > best_val_f1:
             best_val_f1 = val_metrics["f1"]
@@ -334,11 +393,15 @@ def fit_fold(
             f"train_precision={train_metrics['precision']:.4f} | "
             f"train_recall={train_metrics['recall']:.4f} | "
             f"train_f1={train_metrics['f1']:.4f} | "
+            f"train_kappa={train_metrics['kappa']:.4f} | "
+            f"train_auc={train_metrics['auc']:.4f} | "
             f"val_loss={val_metrics['loss']:.4f} | "
             f"val_acc={val_metrics['acc']:.4f} | "
             f"val_precision={val_metrics['precision']:.4f} | "
             f"val_recall={val_metrics['recall']:.4f} | "
             f"val_f1={val_metrics['f1']:.4f} | "
+            f"val_kappa={val_metrics['kappa']:.4f} | "
+            f"val_auc={val_metrics['auc']:.4f} | "
             f"lr={current_lr:.8f}"
         )
 
@@ -369,6 +432,8 @@ def fit_fold(
         "val_precision": history["val_precision"][best_epoch],
         "val_recall": history["val_recall"][best_epoch],
         "val_f1": history["val_f1"][best_epoch],
+        "val_kappa": history["val_kappa"][best_epoch],
+        "val_auc": history["val_auc"][best_epoch],
     }
 
     return model, history, best_metrics

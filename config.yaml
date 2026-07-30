@@ -39,9 +39,10 @@ dropout_rate: 0.3
 
 
 data_dir: "/home/luis/Dev/Classificação/CEYEQ/Balanceado/train"
-test_data_dir: "/home/luis/Dev/Classificação/CEYEQ/test_processed/test_processed"
 metadata_csv: "/home/luis/Dev/Classificação/CEYEQ/data/eyeq_train_dataset_balanced.csv"
-test_csv: "/home/luis/Dev/Classificação/CEYEQ/data/teste_processado.csv"
+
+test_data_dir: "/home/luis/Dev/Classificação/CEYEQ/FQS/images" 
+test_csv: "/home/luis/Dev/Classificação/CEYEQ/FQS/FIQS_dataset.csv"
 
 local_cache_dir: "${CGL_LOCAL_CACHE_DIR:-}"
 filepath_column: "image"

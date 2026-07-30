@@ -4,6 +4,8 @@
 
 # Arquivos
 .Balanceado.zip
+MQIS/
+FQIS/
 
 # Diretórios do projeto
 Modelos/
@@ -12,6 +14,7 @@ teste_ensemble_results/
 test_ensemble/
 arquiteturas/
 weights/
+FQS/
 
 # Pesos de modelos
 *.pt

@@ -1,0 +1,36 @@
+
+    #modelo FQIS
+
+            #DATA AUG
+                #/home/luis/Dev/Classificação/CEYEQ/Modelos/data_augmantation/3 melhores
+            #SINTETIC
+                #/home/luis/Dev/Classificação/CEYEQ/Modelos/Sintetic augmentation/3 melhores
+            #BASELINE
+                # /home/luis/Dev/Classificação/CEYEQ/Modelos/Baseline/3 MELHORES
+
+        #pasta FQIS
+
+            #DATA AUG
+#                /home/luis/Dev/Classificação/CEYEQ/teste_ensemble_results/FQIS/Data aug                
+            #SINTETIC
+#                /home/luis/Dev/Classificação/CEYEQ/teste_ensemble_results/FQIS/Sintetic
+            #BASELINE
+#                /home/luis/Dev/Classificação/CEYEQ/teste_ensemble_results/FQIS/Baseline
+
+
+    #modelo  EYEQ
+
+            #DATA AUG
+#                /home/luis/Dev/Classificação/CEYEQ/Modelos/data_augmantation/3 melhores
+            #SINTETIC
+#                /home/luis/Dev/Classificação/CEYEQ/Modelos/Sintetic augmentation/3 melhores
+            #BASELINE
+#                /home/luis/Dev/Classificação/CEYEQ/Modelos/Baseline/3 MELHORES
+        #pasta FQIS
+
+            #DATA AUG
+#               /home/luis/Dev/Classificação/CEYEQ/teste_ensemble_results/EYEQ/Data augmentation
+            #SINTETIC
+#                /home/luis/Dev/Classificação/CEYEQ/teste_ensemble_results/EYEQ/Sintetic
+#          BASELINE
+#           /home/luis/Dev/Classificação/CEYEQ/teste_ensemble_results/EYEQ/Baseline/Ensemble dos 3 melhores
